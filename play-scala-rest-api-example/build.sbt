@@ -1,3 +1,5 @@
+import java.lang
+
 import play.sbt.PlaySettings
 import sbt.Keys._
 
@@ -16,9 +18,21 @@ libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.2
 libraryDependencies += "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.0.1.1" % Test
 libraryDependencies += "io.gatling" % "gatling-test-framework" % "3.0.1.1" % Test
 
+lazy val plugins = if (lang.Boolean.getBoolean("use-netty"))
+  List(Common, PlayScala, GatlingPlugin, PlayNettyServer)
+else
+  List(Common, PlayScala, GatlingPlugin)
+
+lazy val disablePlugins = if (lang.Boolean.getBoolean("use-netty"))
+  List(PlayAkkaHttpServer)
+else
+  List.empty
+
+
 // The Play project itself
 lazy val root = (project in file("."))
-  .enablePlugins(Common, PlayService, PlayLayoutPlugin, GatlingPlugin)
+  .enablePlugins(plugins:_*)
+  .disablePlugins(disablePlugins:_*)
   .configs(GatlingTest)
   .settings(inConfig(GatlingTest)(Defaults.testSettings): _*)
   .settings(

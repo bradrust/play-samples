@@ -1,12 +1,15 @@
 package v1.post
 
+import akka.actor.ActorSystem
+import akka.pattern
+import akka.stream.scaladsl.Source
 import javax.inject.Inject
-
 import play.api.Logger
 import play.api.data.Form
 import play.api.libs.json.Json
 import play.api.mvc._
 
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class PostFormInput(title: String, body: String)
@@ -14,7 +17,7 @@ case class PostFormInput(title: String, body: String)
 /**
   * Takes HTTP requests and produces JSON.
   */
-class PostController @Inject()(cc: PostControllerComponents)(
+class PostController @Inject()(cc: PostControllerComponents, system: ActorSystem)(
     implicit ec: ExecutionContext)
     extends PostBaseController(cc) {
 
@@ -33,8 +36,13 @@ class PostController @Inject()(cc: PostControllerComponents)(
 
   def index: Action[AnyContent] = PostAction.async { implicit request =>
     logger.trace("index: ")
-    postResourceHandler.find.map { posts =>
-      Ok(Json.toJson(posts))
+    for {
+      _ <- Future.successful(logger.info("start"))
+      m <- postResourceHandler.find
+      _ <- pattern.after(2.seconds, system.scheduler)(Future.successful(Unit))
+      _ <- Future.successful(logger.info("end"))
+    } yield {
+      Ok(Json.toJson(m))
     }
   }
 
